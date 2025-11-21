@@ -1,0 +1,833 @@
+{% extends "project_base.html" %}
+
+{% block content %}
+<div class="analytics-container">
+    <div class="analytics-header">
+        <h1>📈 Аналитика проекта "{{ project.name }}"</h1>
+        <p>Статистика загрузки команды и сложности задач</p>
+    </div>
+
+    <!-- Сообщение о загрузке -->
+    <div id="loadingMessage" class="loading-message">
+        <p>⏳ Загрузка данных аналитики...</p>
+    </div>
+
+    <!-- Загрузка участников -->
+    <div class="analytics-section" id="workloadSection" style="display: none;">
+        <h2>📊 Загрузка участников команды</h2>
+        <div class="workload-stats">
+            <div class="stat-card">
+                <h3>Общая статистика</h3>
+                <div id="workloadSummary" class="stats-grid">
+                    <!-- Данные будут загружены через JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="workload-charts">
+            <div class="chart-container">
+                <h3>Коэффициент загрузки (%)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="workloadChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Сложность задач по участникам</h3>
+                <div class="chart-wrapper">
+                    <canvas id="complexityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="workload-details">
+            <h3>Детализация по участникам</h3>
+            <div id="workloadDetails" class="details-grid">
+                <!-- Данные будут загружены через JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Сложность задач -->
+    <div class="analytics-section" id="complexitySection" style="display: none;">
+        <h2>⚖️ Сложность задач проекта</h2>
+        <div class="complexity-stats">
+            <div class="stat-card">
+                <h3>Общая сложность</h3>
+                <div id="complexitySummary" class="stats-grid">
+                    <!-- Данные будут загружены через JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <div class="complexity-charts">
+            <div class="chart-container">
+                <h3>Распределение сложности по задачам</h3>
+                <div class="chart-wrapper">
+                    <canvas id="tasksComplexityChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Сложность по приоритетам</h3>
+                <div class="chart-wrapper">
+                    <canvas id="priorityComplexityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="complexity-details">
+            <h3>Детализация по задачам</h3>
+            <table id="complexityTable" class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Задача</th>
+                        <th>Длительность</th>
+                        <th>Приоритет</th>
+                        <th>Сложность</th>
+                        <th>Вклад в проект</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Данные будут загружены через JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Сообщение об ошибке -->
+    <div id="errorMessage" class="error-message" style="display: none;">
+        <h3>❌ Ошибка загрузки данных</h3>
+        <p id="errorText">Не удалось загрузить данные аналитики.</p>
+        <button onclick="location.reload()">🔄 Обновить страницу</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.analytics = window.analytics || {
+    track: function(eventName, properties) { 
+        console.log('[Analytics Stub] Track:', eventName, properties); 
+    },
+    identify: function(userId, traits) { 
+        console.log('[Analytics Stub] Identify:', userId, traits); 
+    },
+    page: function(category, name, properties) { 
+        console.log('[Analytics Stub] Page:', category, name, properties); 
+    }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Глобальная переменная для менеджера аналитики
+let analyticsManager = null;
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 Инициализация страницы аналитики...');
+    
+    // Получаем ID проекта из URL
+    const pathParts = window.location.pathname.split('/');
+    const projectId = parseInt(pathParts[2]);
+    
+    if (isNaN(projectId)) {
+        console.error('❌ Не удалось определить ID проекта');
+        showError('Не удалось определить проект');
+        return;
+    }
+    
+    console.log(`📁 Project ID: ${projectId}`);
+    
+    // Инициализируем менеджер аналитики
+    analyticsManager = new AnalyticsManager(projectId);
+});
+
+function showError(message) {
+    document.getElementById('loadingMessage').style.display = 'none';
+    document.getElementById('errorText').textContent = message;
+    document.getElementById('errorMessage').style.display = 'block';
+}
+
+class AnalyticsManager {
+    constructor(projectId) {
+        this.projectId = projectId;
+        this.workloadData = [];
+        this.complexityData = [];
+        this.init();
+    }
+
+    init() {
+        console.log(`🔄 Инициализация аналитики для проекта ${this.projectId}`);
+        this.hideError();
+        this.showLoading();
+        this.loadWorkloadData();
+        this.loadComplexityData();
+    }
+
+    async loadWorkloadData() {
+        try {
+            console.log(`📊 Загрузка данных загрузки...`);
+            const response = await fetch(`/api/project/${this.projectId}/analytics/workload`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            console.log('Данные загрузки:', data);
+            
+            if (data.success) {
+                this.workloadData = data.workload_data || [];
+                this.renderWorkloadCharts();
+                this.renderWorkloadDetails();
+                this.checkDataAndShowSections();
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка загрузки данных загрузки:', error);
+            this.showError('Не удалось загрузить данные загрузки: ' + error.message);
+        }
+    }
+
+    async loadComplexityData() {
+        try {
+            console.log(`⚖️ Загрузка данных сложности...`);
+            const response = await fetch(`/api/project/${this.projectId}/analytics/complexity`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            console.log('Данные сложности:', data);
+            
+            if (data.success) {
+                this.complexityData = data.complexity_data || [];
+                this.renderComplexityCharts();
+                this.renderComplexityTable();
+                this.checkDataAndShowSections();
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка загрузки данных сложности:', error);
+            this.showError('Не удалось загрузить данные сложности: ' + error.message);
+        }
+    }
+
+    checkDataAndShowSections() {
+        // Показываем секции только если есть данные
+        const hasWorkloadData = this.workloadData && this.workloadData.length > 0;
+        const hasComplexityData = this.complexityData && this.complexityData.length > 0;
+        
+        console.log(`📊 Проверка данных: workload=${hasWorkloadData}, complexity=${hasComplexityData}`);
+        
+        if (hasWorkloadData || hasComplexityData) {
+            this.hideLoading();
+            this.hideError();
+            
+            if (hasWorkloadData) {
+                document.getElementById('workloadSection').style.display = 'block';
+            }
+            if (hasComplexityData) {
+                document.getElementById('complexitySection').style.display = 'block';
+            }
+        } else {
+            // Если нет данных вообще, показываем сообщение
+            this.hideLoading();
+            this.showError('В проекте нет данных для анализа. Создайте задачи и назначьте исполнителей.');
+        }
+    }
+
+    renderWorkloadCharts() {
+        if (this.workloadData.length === 0) {
+            console.log('❌ Нет данных для графиков загрузки');
+            return;
+        }
+
+        try {
+            console.log('🔄 Рендеринг графиков загрузки...');
+            
+            // График загрузки участников
+            const workloadCanvas = document.getElementById('workloadChart');
+            console.log('workloadCanvas:', workloadCanvas);
+            
+            if (workloadCanvas && workloadCanvas.getContext) {
+                console.log('✅ Canvas workloadChart найден, создаем график...');
+                const workloadCtx = workloadCanvas.getContext('2d');
+                
+                // Убедимся, что Chart доступен
+                if (typeof Chart === 'undefined') {
+                    console.error('❌ Chart.js не загружен');
+                    return;
+                }
+                
+                new Chart(workloadCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: this.workloadData.map(user => user.username),
+                        datasets: [{
+                            label: 'Коэффициент загрузки (%)',
+                            data: this.workloadData.map(user => user.workload_percentage),
+                            backgroundColor: this.workloadData.map(user => 
+                                user.workload_percentage > 100 ? '#e74c3c' : 
+                                user.workload_percentage > 80 ? '#f39c12' : '#2ecc71'
+                            ),
+                            borderColor: '#34495e',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: Math.max(100, ...this.workloadData.map(user => user.workload_percentage)) + 10,
+                                title: {
+                                    display: true,
+                                    text: 'Процент загрузки'
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('✅ График загрузки создан');
+            } else {
+                console.error('❌ Canvas элемент workloadChart не найден или не поддерживается');
+            }
+
+            // График сложности по участникам
+            const complexityCanvas = document.getElementById('complexityChart');
+            console.log('complexityCanvas:', complexityCanvas);
+            
+            if (complexityCanvas && complexityCanvas.getContext) {
+                console.log('✅ Canvas complexityChart найден, создаем график...');
+                const complexityCtx = complexityCanvas.getContext('2d');
+                
+                new Chart(complexityCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: this.workloadData.map(user => user.username),
+                        datasets: [{
+                            label: 'Общая сложность задач',
+                            data: this.workloadData.map(user => user.complexity_score),
+                            backgroundColor: '#3498db',
+                            borderColor: '#2980b9',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Баллы сложности'
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('✅ График сложности создан');
+            } else {
+                console.error('❌ Canvas элемент complexityChart не найден или не поддерживается');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка рендеринга графиков:', error);
+        }
+    }
+
+    renderComplexityCharts() {
+        if (this.complexityData.length === 0) {
+            console.log('❌ Нет данных для графиков сложности');
+            return;
+        }
+
+        try {
+            console.log('🔄 Рендеринг графиков сложности...');
+            
+            // Распределение сложности по задачам
+            const tasksCanvas = document.getElementById('tasksComplexityChart');
+            console.log('tasksCanvas:', tasksCanvas);
+            
+            if (tasksCanvas && tasksCanvas.getContext) {
+                console.log('✅ Canvas tasksComplexityChart найден, создаем график...');
+                const tasksCtx = tasksCanvas.getContext('2d');
+                
+                new Chart(tasksCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: this.complexityData.map(task => task.title),
+                        datasets: [{
+                            data: this.complexityData.map(task => task.complexity),
+                            backgroundColor: this.generateColors(this.complexityData.length)
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+                console.log('✅ График распределения сложности создан');
+            }
+
+            // Сложность по приоритетам
+            const priorityGroups = this.groupByPriority();
+            const priorityCanvas = document.getElementById('priorityComplexityChart');
+            console.log('priorityCanvas:', priorityCanvas);
+            
+            if (priorityCanvas && priorityCanvas.getContext) {
+                console.log('✅ Canvas priorityComplexityChart найден, создаем график...');
+                const priorityCtx = priorityCanvas.getContext('2d');
+                
+                new Chart(priorityCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(priorityGroups).map(priority => this.getPriorityLabel(priority)),
+                        datasets: [{
+                            data: Object.values(priorityGroups).map(group => 
+                                group.reduce((sum, task) => sum + task.complexity, 0)
+                            ),
+                            backgroundColor: ['#27ae60', '#f39c12', '#e74c3c', '#c0392b']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+                console.log('✅ График сложности по приоритетам создан');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка рендеринга графиков сложности:', error);
+        }
+    }
+
+    renderWorkloadDetails() {
+        const detailsContainer = document.getElementById('workloadDetails');
+        const summaryContainer = document.getElementById('workloadSummary');
+
+        if (!detailsContainer || !summaryContainer) {
+            console.error('❌ Контейнеры не найдены');
+            return;
+        }
+
+        if (this.workloadData.length === 0) {
+            detailsContainer.innerHTML = '<p class="no-data">Нет данных о загрузке участников</p>';
+            summaryContainer.innerHTML = '<p class="no-data">Нет данных для отображения</p>';
+            return;
+        }
+
+        // Общая статистика
+        const totalWorkload = this.workloadData.reduce((sum, user) => sum + user.workload_percentage, 0);
+        const avgWorkload = totalWorkload / this.workloadData.length;
+        const overloadedUsers = this.workloadData.filter(user => user.workload_percentage > 100).length;
+
+        summaryContainer.innerHTML = `
+            <div class="stat-item">
+                <span class="stat-value">${this.workloadData.length}</span>
+                <span class="stat-label">Участников</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${avgWorkload.toFixed(1)}%</span>
+                <span class="stat-label">Средняя загрузка</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${overloadedUsers}</span>
+                <span class="stat-label">Перегружено</span>
+            </div>
+        `;
+
+        // Детализация по участникам
+        detailsContainer.innerHTML = this.workloadData.map(user => `
+            <div class="user-workload-card">
+                <div class="user-header">
+                    <h4>${this.escapeHtml(user.username)}</h4>
+                    <span class="user-role">${user.role}</span>
+                </div>
+                <div class="workload-metrics">
+                    <div class="metric">
+                        <span class="metric-label">Загрузка:</span>
+                        <span class="metric-value ${user.workload_percentage > 100 ? 'overloaded' : ''}">
+                            ${user.workload_percentage}%
+                        </span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Задачи:</span>
+                        <span class="metric-value">${user.task_count}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Сложность:</span>
+                        <span class="metric-value">${user.complexity_score}</span>
+                    </div>
+                </div>
+                ${user.tasks && user.tasks.length > 0 ? `
+                <div class="user-tasks">
+                    <strong>Задачи:</strong>
+                    ${user.tasks.map(task => `
+                        <div class="task-item">
+                            <span class="task-title">${this.escapeHtml(task.title)}</span>
+                            <span class="task-duration">${task.duration}д</span>
+                            <span class="task-priority priority-${task.priority}">${this.getPriorityLabel(task.priority)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                ` : '<p class="no-tasks">Нет назначенных задач</p>'}
+            </div>
+        `).join('');
+    }
+
+    renderComplexityTable() {
+        const tableBody = document.querySelector('#complexityTable tbody');
+        const summaryContainer = document.getElementById('complexitySummary');
+
+        if (!tableBody || !summaryContainer) {
+            console.error('❌ Элементы таблицы не найдены');
+            return;
+        }
+
+        if (this.complexityData.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="no-data">Нет данных о задачах</td></tr>';
+            summaryContainer.innerHTML = '<p class="no-data">Нет данных для отображения</p>';
+            return;
+        }
+
+        // Общая статистика
+        const totalComplexity = this.complexityData.reduce((sum, task) => sum + task.complexity, 0);
+        const avgComplexity = totalComplexity / this.complexityData.length;
+
+        summaryContainer.innerHTML = `
+            <div class="stat-item">
+                <span class="stat-value">${this.complexityData.length}</span>
+                <span class="stat-label">Всего задач</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${totalComplexity.toFixed(1)}</span>
+                <span class="stat-label">Общая сложность</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${avgComplexity.toFixed(1)}</span>
+                <span class="stat-label">Средняя сложность</span>
+            </div>
+        `;
+
+        // Таблица задач
+        tableBody.innerHTML = this.complexityData.map(task => `
+            <tr>
+                <td>${this.escapeHtml(task.title)}</td>
+                <td>${task.duration} дн.</td>
+                <td><span class="priority-badge priority-${task.priority}">${this.getPriorityLabel(task.priority)}</span></td>
+                <td>${task.complexity}</td>
+                <td>
+                    <div class="percentage-bar">
+                        <div class="percentage-fill" style="width: ${task.percentage || 0}%"></div>
+                        <span class="percentage-text">${task.percentage || 0}%</span>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    groupByPriority() {
+        const groups = {};
+        this.complexityData.forEach(task => {
+            if (!groups[task.priority]) {
+                groups[task.priority] = [];
+            }
+            groups[task.priority].push(task);
+        });
+        return groups;
+    }
+
+    getPriorityLabel(priority) {
+        const labels = {
+            'low': '🔵 Низкий',
+            'medium': '🟡 Средний', 
+            'high': '🟠 Высокий',
+            'critical': '🔴 Критический'
+        };
+        return labels[priority] || priority;
+    }
+
+    generateColors(count) {
+        const colors = [];
+        for (let i = 0; i < count; i++) {
+            const hue = (i * 137.5) % 360;
+            colors.push(`hsl(${hue}, 70%, 60%)`);
+        }
+        return colors;
+    }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    showLoading() {
+        document.getElementById('loadingMessage').style.display = 'block';
+        document.getElementById('workloadSection').style.display = 'none';
+        document.getElementById('complexitySection').style.display = 'none';
+        document.getElementById('errorMessage').style.display = 'none';
+    }
+
+    hideLoading() {
+        document.getElementById('loadingMessage').style.display = 'none';
+    }
+
+    showError(message = '') {
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('workloadSection').style.display = 'none';
+        document.getElementById('complexitySection').style.display = 'none';
+        
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        if (message && errorText) {
+            errorText.textContent = message;
+        }
+        errorMessage.style.display = 'block';
+    }
+
+    hideError() {
+        document.getElementById('errorMessage').style.display = 'none';
+    }
+}
+</script>
+
+<style>
+.analytics-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.analytics-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.analytics-section {
+    margin-bottom: 40px;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.workload-stats, .complexity-stats {
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 10px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.stat-label {
+    display: block;
+    font-size: 14px;
+    color: #7f8c8d;
+}
+
+.workload-charts, .complexity-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.chart-container {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.chart-wrapper {
+    height: 300px;
+    position: relative;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.user-workload-card {
+    border: 1px solid #e1e8ed;
+    border-radius: 6px;
+    padding: 15px;
+    background: white;
+}
+
+.user-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.user-role {
+    background: #3498db;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.workload-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.metric {
+    text-align: center;
+}
+
+.metric-label {
+    display: block;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+.metric-value {
+    display: block;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.metric-value.overloaded {
+    color: #e74c3c;
+}
+
+.user-tasks {
+    margin-top: 10px;
+}
+
+.task-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.task-title {
+    flex: 1;
+    font-size: 14px;
+}
+
+.task-duration, .task-priority {
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+.priority-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: white;
+}
+
+.priority-low { background: #27ae60; }
+.priority-medium { background: #f39c12; }
+.priority-high { background: #e74c3c; }
+.priority-critical { background: #c0392b; }
+
+.percentage-bar {
+    position: relative;
+    height: 20px;
+    background: #ecf0f1;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.percentage-fill {
+    height: 100%;
+    background: #3498db;
+    transition: width 0.3s ease;
+}
+
+.percentage-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.analytics-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.analytics-table th,
+.analytics-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.analytics-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+.loading-message, .error-message {
+    text-align: center;
+    padding: 40px;
+    background: white;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.error-message {
+    background: #ffeaa7;
+}
+
+.no-data {
+    text-align: center;
+    color: #7f8c8d;
+    font-style: italic;
+    padding: 20px;
+}
+</style>
+{% endblock %}

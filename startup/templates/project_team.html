@@ -1,0 +1,274 @@
+{% extends "project_base.html" %}
+
+{% block content %}
+<div class="team-container">
+    <div class="team-header">
+        <h1>👥 Команда проекта "{{ project.name }}"</h1>
+        <p>Управление участниками проекта</p>
+    </div>
+    
+    <div class="members-section">
+        <h3 class="section-title">Участники команды</h3>
+        
+        {% if members %}
+            <div class="members-grid">
+                {% for member in members %}
+                <div class="member-card">
+                    <div class="member-info">
+                        <h4>{{ member.username }}</h4>
+                        <p>{{ member.email }}</p>
+                        <small>ID: {{ member.user_id }}</small>
+                    </div>
+                    <div class="member-actions">
+                        <span class="member-role role-{{ member.role }}">{{ member.role }}</span>
+                        {% if member.user_id != current_user.id %}
+                        <button class="btn btn-danger btn-small" onclick="removeMember({{ member.user_id }})">
+                            Удалить
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>В проекте пока нет участников</h3>
+                <p>Добавьте первого участника с помощью формы ниже</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="add-member-section">
+        <h3>Добавить участника по ID</h3>
+        <form id="addMemberForm" class="add-member-form">
+            <div class="form-group">
+                <label for="userIdInput">ID пользователя:</label>
+                <div class="search-container">
+                    <input type="number" id="userIdInput" 
+                           placeholder="Введите ID пользователя..."
+                           min="1"
+                           class="user-id-input">
+                    <button type="button" class="btn btn-secondary" onclick="findUserById()">
+                        <span>🔍</span>
+                        Найти
+                    </button>
+                </div>
+                <small>Введите числовой ID пользователя</small>
+            </div>
+            
+            <div id="userResult" class="user-result" style="display: none;">
+                <div class="user-found-card">
+                    <div class="user-info">
+                        <h4 id="foundUserName"></h4>
+                        <p id="foundUserEmail"></p>
+                        <small>ID: <span id="foundUserId"></span></small>
+                    </div>
+                    <button type="button" class="btn btn-success" onclick="selectUser()">
+                        <span>✓</span>
+                        Выбрать
+                    </button>
+                </div>
+            </div>
+            
+            <div id="selectedUser" class="selected-user" style="display: none;">
+                <div class="selected-user-card">
+                    <div class="selected-user-info">
+                        <span class="selected-user-name" id="selectedUserName"></span>
+                        <span class="selected-user-id">ID: <span id="selectedUserId"></span></span>
+                    </div>
+                    <button type="button" class="btn btn-danger btn-small" onclick="deselectUser()">
+                        <span>×</span>
+                    </button>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="roleSelect">Роль:</label>
+                        <select id="roleSelect">
+                            <option value="member">Участник</option>
+                            <option value="admin">Администратор</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="addUserBtn">
+                    <span>➕</span>
+                    Добавить пользователя в проект
+                </button>
+            </div>
+            
+            <div id="userNotFound" class="alert alert-error" style="display: none;">
+                Пользователь с указанным ID не найден
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let foundUser = null;
+    let selectedUser = null;
+
+    // Поиск пользователя по ID
+    async function findUserById() {
+        const userIdInput = document.getElementById('userIdInput');
+        const userId = userIdInput.value.trim();
+        
+        if (!userId) {
+            alert('Пожалуйста, введите ID пользователя');
+            return;
+        }
+        
+        const searchBtn = document.querySelector('.search-container button');
+        const originalText = searchBtn.innerHTML;
+        
+        try {
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<span>⏳</span> Поиск...';
+            
+            const response = await fetch(`/api/user/${userId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                foundUser = data.user;
+                displayFoundUser(foundUser);
+                hideError();
+            } else {
+                showError('Пользователь не найден');
+                clearFoundUser();
+            }
+        } catch (error) {
+            showError('Ошибка при поиске пользователя: ' + error.message);
+            clearFoundUser();
+        } finally {
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = originalText;
+        }
+    }
+    
+    // Отображение найденного пользователя
+    function displayFoundUser(user) {
+        document.getElementById('foundUserName').textContent = user.username;
+        document.getElementById('foundUserEmail').textContent = user.email;
+        document.getElementById('foundUserId').textContent = user.id;
+        document.getElementById('userResult').style.display = 'block';
+    }
+    
+    // Очистка результатов поиска
+    function clearFoundUser() {
+        foundUser = null;
+        document.getElementById('userResult').style.display = 'none';
+    }
+    
+    // Выбор пользователя
+    function selectUser() {
+        if (!foundUser) return;
+        
+        selectedUser = foundUser;
+        document.getElementById('selectedUserName').textContent = selectedUser.username;
+        document.getElementById('selectedUserId').textContent = selectedUser.id;
+        document.getElementById('selectedUser').style.display = 'block';
+        
+        // Скрываем результаты поиска
+        clearFoundUser();
+        document.getElementById('userIdInput').value = '';
+    }
+    
+    // Отмена выбора пользователя
+    function deselectUser() {
+        selectedUser = null;
+        document.getElementById('selectedUser').style.display = 'none';
+    }
+    
+    // Показать ошибку
+    function showError(message) {
+        const errorDiv = document.getElementById('userNotFound');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+    
+    // Скрыть ошибку
+    function hideError() {
+        document.getElementById('userNotFound').style.display = 'none';
+    }
+    
+    // Обработка отправки формы
+    document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!selectedUser) {
+            alert('Пожалуйста, выберите пользователя');
+            return;
+        }
+        
+        const roleSelect = document.getElementById('roleSelect');
+        const addBtn = document.getElementById('addUserBtn');
+        
+        const userId = selectedUser.id;
+        const role = roleSelect.value;
+        
+        addBtn.disabled = true;
+        addBtn.innerHTML = '<span>⏳</span> Добавление...';
+        
+        try {
+            const response = await fetch(`/api/project/{{ project.id }}/team`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    role: role
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('Пользователь успешно добавлен в проект');
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        } catch (error) {
+            alert('Ошибка при добавлении пользователя: ' + error.message);
+        } finally {
+            addBtn.disabled = false;
+            addBtn.innerHTML = '<span>➕</span> Добавить пользователя в проект';
+        }
+    });
+    
+    // Удаление участника
+    async function removeMember(userId) {
+        if (!confirm('Вы уверены, что хотите удалить этого участника из проекта?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/project/{{ project.id }}/team/${userId}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('Участник успешно удален из проекта');
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        } catch (error) {
+            alert('Ошибка при удалении участника: ' + error.message);
+        }
+    }
+    
+    // Поиск при нажатии Enter
+    document.getElementById('userIdInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            findUserById();
+        }
+    });
+</script>
+{% endblock %}

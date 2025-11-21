@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block sidebar %}
+<!-- Боковое меню для страниц проекта -->
+<nav class="sidebar" id="projectSidebar">
+    <div class="sidebar-header">
+        <h2>{% if project %}{{ project.name }}{% else %}Мои задачи{% endif %}</h2>
+        <small>{% if project %}Меню проекта{% else %}Персональные задачи{% endif %}</small>
+        <button class="toggle-sidebar-btn" onclick="toggleSidebar('projectSidebar')">
+            <span class="menu-icon">←</span>
+        </button>
+    </div>
+    <ul class="sidebar-menu">
+        {% if project %}
+        <li class="menu-item {% if active_tab == 'kanban' %}active{% endif %}">
+            <a href="{{ url_for('kanban', project_id=project.id) }}">
+                <span class="menu-icon">📋</span>
+                <span class="menu-text">Канбан</span>
+            </a>
+        </li>
+        <li class="menu-item {% if active_tab == 'network' %}active{% endif %}">
+            <a href="{{ url_for('network_graph', project_id=project.id) }}">
+                <span class="menu-icon">📊</span>
+                <span class="menu-text">Сетевой график</span>
+            </a>
+        </li>
+        <li class="menu-item {% if active_tab == 'gantt' %}active{% endif %}">
+            <a href="{{ url_for('gantt_chart', project_id=project.id) }}">
+                <span class="menu-icon">📅</span>
+                <span class="menu-text">График Ганта</span>
+            </a>
+        </li>
+        <!-- ДОБАВЛЯЕМ ПУНКТ МЕНЮ "КОМАНДА" -->
+        <li class="menu-item {% if active_tab == 'team' %}active{% endif %}">
+            <a href="{{ url_for('project_team', project_id=project.id) }}">
+                <span class="menu-icon">👥</span>
+                <span class="menu-text">Команда</span>
+            </a>
+        </li>
+        <!-- В project_base.html добавить после существующих пунктов меню -->
+        <li class="menu-item {% if active_tab == 'team_tasks' %}active{% endif %}">
+            <a href="{{ url_for('team_tasks', project_id=project.id) }}">
+                <span class="menu-icon">👥</span>
+                <span class="menu-text">Задачи команды</span>
+            </a>
+        </li>
+        <!-- В project_base.html добавить после существующих пунктов меню -->
+        <li class="menu-item {% if active_tab == 'analytics' %}active{% endif %}">
+            <a href="{{ url_for('project_analytics', project_id=project.id) }}">
+                <span class="menu-icon">📈</span>
+                <span class="menu-text">Аналитика</span>
+            </a>
+        </li>
+        {% endif %}
+        <li class="menu-divider"></li>
+        <li class="menu-item">
+            <a href="{{ url_for('index') }}">
+                <span class="menu-icon">←</span>
+                <span class="menu-text">Назад к проектам</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+{% endblock %}

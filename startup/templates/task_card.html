@@ -1,0 +1,25 @@
+<div class="task-card" draggable="true" data-task-id="{{ task['id'] }}">
+    <div class="task-header">
+        <h4>{{ task['title'] }}</h4>
+        <button class="edit-btn" onclick="openEditModal({{ task['id'] }})">✏️</button>
+    </div>
+    <p>{{ task['description'] }}</p>
+    <div class="task-dates">
+        <div class="date-info">
+            <strong>Начало:</strong> {{ task['start_date'] }}
+        </div>
+        <div class="date-info">
+            <strong>Окончание:</strong> {{ task['end_date'] }}
+        </div>
+        <div class="date-info">
+            <strong>Длительность:</strong> {{ task['duration'] }} дн.
+        </div>
+    </div>
+    <div class="task-assignees">
+    {% if task.assignees %}
+        {% for assignee in task.assignees %}
+            <span class="assignee-badge">{{ assignee.username }}</span>
+        {% endfor %}
+    {% endif %}
+    </div>
+</div>

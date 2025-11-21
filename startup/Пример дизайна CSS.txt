@@ -1,0 +1,869 @@
+/* ================================================
+   Глобальные переменные и сброс стилей
+   ================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Основные цвета */
+    --primary-color: #2c3e50;
+    --secondary-color: #34495e;
+    --accent-color: #3498db;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    
+    /* Фоновые цвета */
+    --background: #ecf0f1;
+    --card-bg: #ffffff;
+    
+    /* Текстовые цвета */
+    --text-primary: #2c3e50;
+    --text-secondary: #7f8c8d;
+    
+    /* Границы и тени */
+    --border-color: #dfe6e9;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.08);
+    
+    /* Размеры */
+    --sidebar-width: 260px;
+    
+    /* Анимации */
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+    background: var(--background);
+    color: var(--text-primary);
+    line-height: 1.6;
+    display: flex;
+    min-height: 100vh;
+}
+
+
+/* ================================================
+   Боковое меню (Sidebar)
+   ================================================ */
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--card-bg);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    transition: var(--transition);
+}
+
+.sidebar-header {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    position: relative;
+}
+
+.sidebar-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
+}
+
+.sidebar-header small {
+    font-size: 13px;
+    opacity: 0.85;
+    font-weight: 400;
+}
+
+.toggle-sidebar-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.toggle-sidebar-btn:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 12px 8px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.menu-item {
+    margin-bottom: 4px;
+}
+
+.menu-item a {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: var(--transition);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.menu-item a:hover {
+    background: var(--background);
+    color: var(--accent-color);
+}
+
+.menu-item.active a {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.menu-icon {
+    width: 24px;
+    margin-right: 12px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-text {
+    flex: 1;
+}
+
+.menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 12px 0;
+}
+
+
+/* ================================================
+   Основной контент
+   ================================================ */
+
+.main-content {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    padding: 32px;
+    transition: var(--transition);
+}
+
+.content-header {
+    margin-bottom: 32px;
+}
+
+.content-header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    letter-spacing: -0.03em;
+}
+
+.content-header p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+
+/* ================================================
+   Статистика проекта
+   ================================================ */
+
+.gantt-grid-header {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 28px;
+}
+
+.gantt-stat-card {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    text-align: center;
+    transition: var(--transition);
+}
+
+.gantt-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.gantt-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+}
+
+.gantt-stat-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+
+/* ================================================
+   Панель управления
+   ================================================ */
+
+.gantt-controls {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 24px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.view-mode-selector {
+    display: flex;
+    gap: 8px;
+    background: var(--background);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.view-mode-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+
+.view-mode-btn:hover {
+    background: white;
+}
+
+.view-mode-btn.active {
+    background: var(--accent-color);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+
+/* ================================================
+   Кнопки
+   ================================================ */
+
+.btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-primary {
+    background: var(--accent-color);
+    color: white;
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-warning {
+    background: var(--warning-color);
+    color: white;
+}
+
+.btn-danger {
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-secondary {
+    background: var(--background);
+    color: var(--text-primary);
+}
+
+
+/* ================================================
+   Контейнер графика Ганта
+   ================================================ */
+
+.gantt-container {
+    background: var(--card-bg);
+    padding: 28px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 24px;
+    overflow-x: auto;
+    margin-left: 0;
+    width: calc(100vw - var(--sidebar-width) - 64px);
+    max-width: 100%;
+}
+
+#gantt-chart {
+    min-height: 400px;
+}
+
+
+/* ================================================
+   Информационная панель
+   ================================================ */
+
+.gantt-info {
+    background: var(--card-bg);
+    padding: 28px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.gantt-info h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+}
+
+.gantt-task-details {
+    padding: 20px;
+    background: var(--background);
+    border-radius: 8px;
+    border-left: 4px solid var(--accent-color);
+    margin-bottom: 24px;
+}
+
+.gantt-task-details h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.gantt-task-details p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.gantt-task-details strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+
+/* ================================================
+   Вехи проекта
+   ================================================ */
+
+.milestone-item {
+    margin: 12px 0;
+    padding: 16px;
+    background: var(--background);
+    border-radius: 8px;
+    display: flex;
+    align-items: start;
+    transition: var(--transition);
+}
+
+.milestone-item:hover {
+    background: #e0e7ea;
+}
+
+.milestone-marker {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 12px;
+    margin-top: 4px;
+    flex-shrink: 0;
+}
+
+.milestone-item strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.milestone-item small {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: block;
+    margin-top: 4px;
+}
+
+
+/* ================================================
+   Модальное окно
+   ================================================ */
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--card-bg);
+    margin: 5% auto;
+    padding: 32px;
+    border-radius: 16px;
+    max-width: 520px;
+    box-shadow: var(--shadow-lg);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.close {
+    color: var(--text-secondary);
+    float: right;
+    font-size: 28px;
+    font-weight: 300;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.close:hover {
+    color: var(--text-primary);
+}
+
+.modal-content h3 {
+    margin-bottom: 24px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+
+/* ================================================
+   Формы
+   ================================================ */
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: var(--transition);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.date-fields {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.field-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.field-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: var(--transition);
+    background: var(--card-bg);
+}
+
+.field-group input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+
+/* ================================================
+   Настройка Frappe Gantt
+   ================================================ */
+
+.gantt .bar {
+    fill: var(--accent-color);
+    stroke: var(--accent-color);
+}
+
+.gantt .bar-progress {
+    fill: var(--success-color);
+}
+
+.gantt .bar-label {
+    fill: white;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.gantt .grid-header {
+    fill: var(--background);
+    stroke: var(--border-color);
+}
+
+.gantt .grid-row {
+    fill: transparent;
+}
+
+.gantt .grid-row:nth-child(even) {
+    fill: rgba(0,0,0,0.02);
+}
+
+.gantt .today-highlight {
+    fill: rgba(52, 152, 219, 0.1);
+}
+
+
+/* ================================================
+   Адаптивность
+   ================================================ */
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 20px;
+    }
+
+    .gantt-container {
+        width: 100vw;
+        margin-left: -20px;
+        padding: 10px;
+        border-radius: 0;
+    }
+
+    .gantt-grid-header {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .date-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .gantt-controls {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+    }
+
+    .view-mode-selector {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .view-mode-btn {
+        flex: 1;
+        min-width: 70px;
+    }
+
+    .content-header h1 {
+        font-size: 22px;
+    }
+
+    .gantt-stat-card {
+        padding: 16px;
+    }
+
+    .gantt-stat-value {
+        font-size: 24px;
+    }
+
+    .modal-content {
+        margin: 10% 16px;
+        padding: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .gantt-grid-header {
+        grid-template-columns: 1fr;
+    }
+
+    .view-mode-btn {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}
+
+
+/* ================================================
+   Утилитарные классы
+   ================================================ */
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mt-4 { margin-top: 32px; }
+
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.mb-4 { margin-bottom: 32px; }
+
+.p-1 { padding: 8px; }
+.p-2 { padding: 16px; }
+.p-3 { padding: 24px; }
+.p-4 { padding: 32px; }
+
+.flex {
+    display: flex;
+}
+
+.flex-column {
+    flex-direction: column;
+}
+
+.flex-center {
+    justify-content: center;
+    align-items: center;
+}
+
+.flex-between {
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gap-1 { gap: 8px; }
+.gap-2 { gap: 16px; }
+.gap-3 { gap: 24px; }
+
+.w-100 {
+    width: 100%;
+}
+
+.hidden {
+    display: none;
+}
+
+
+/* ================================================
+   Дополнительные элементы интерфейса
+   ================================================ */
+
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.badge-primary {
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--accent-color);
+}
+
+.badge-success {
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+}
+
+.badge-warning {
+    background: rgba(243, 156, 18, 0.1);
+    color: var(--warning-color);
+}
+
+.badge-danger {
+    background: rgba(231, 76, 60, 0.1);
+    color: var(--danger-color);
+}
+
+.alert {
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    border-left: 4px solid;
+}
+
+.alert-info {
+    background: rgba(52, 152, 219, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.alert-success {
+    background: rgba(39, 174, 96, 0.1);
+    border-color: var(--success-color);
+    color: var(--success-color);
+}
+
+.alert-warning {
+    background: rgba(243, 156, 18, 0.1);
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+}
+
+.alert-danger {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+}
+
+.card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: var(--transition);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-body {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 20px 0;
+}
+
+
+/* ================================================
+   Анимации загрузки
+   ================================================ */
+
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--border-color);
+    border-radius: 50%;
+    border-top-color: var(--accent-color);
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, var(--background) 25%, #d1d8dc 50%, var(--background) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

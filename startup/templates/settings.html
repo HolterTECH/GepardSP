@@ -1,0 +1,136 @@
+{% extends "main_base.html" %}
+
+{% block title %}Настройки - Управление проектами{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="settings-header">
+        <h1>Настройки аккаунта</h1>
+        <p>Управление вашим профилем и настройками безопасности</p>
+    </div>
+
+    <div class="settings-content">
+        <!-- Секция профиля -->
+        <div class="settings-section">
+            <h2>Профиль</h2>
+            <div class="settings-card">
+                <form method="POST" class="settings-form">
+                    <input type="hidden" name="operation" value="update_profile">
+                    
+                    <div class="form-group">
+                        <label for="username">Имя пользователя:</label>
+                        <input type="text" id="username" name="username" 
+                               value="{{ user_data.username }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" name="email" 
+                               value="{{ user_data.email }}" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- В settings.html - добавить после секции смены пароля -->
+        <!-- Секция внешнего вида -->
+        <!-- Добавьте этот блок в settings.html после секции смены пароля -->
+        <div class="settings-section">
+            <h2>Настройки интерфейса</h2>
+            <div class="settings-card">
+                <form method="POST" class="settings-form">
+                    <input type="hidden" name="operation" value="update_menu_position">
+                    
+                    <div class="form-group">
+                        <label>Расположение меню:</label>
+                        <div style="display: flex; gap: 15px; margin-top: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="menu_position" value="side" 
+                                    {% if current_user.menu_position == 'side' %}checked{% endif %}>
+                                <span>Боковое меню</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="menu_position" value="top" 
+                                    {% if current_user.menu_position == 'top' %}checked{% endif %}>
+                                <span>Верхнее меню</span>
+                            </label>
+                        </div>
+                        <small>Выберите предпочтительное расположение главного меню</small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Секция смены пароля -->
+        <div class="settings-section">
+            <h2>Смена пароля</h2>
+            <div class="settings-card">
+                <form method="POST" class="settings-form">
+                    <input type="hidden" name="operation" value="change_password">
+                    
+                    <div class="form-group">
+                        <label for="current_password">Текущий пароль:</label>
+                        <input type="password" id="current_password" name="current_password" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="new_password">Новый пароль:</label>
+                        <input type="password" id="new_password" name="new_password" required>
+                        <small>Пароль должен содержать минимум 6 символов</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirm_password">Подтвердите новый пароль:</label>
+                        <input type="password" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Сменить пароль</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Секция выхода -->
+        <div class="settings-section">
+            <h2>Выход из аккаунта</h2>
+            <div class="settings-card">
+                <p>Выйти из аккаунта на этом устройстве</p>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">Выйти из аккаунта</a>
+            </div>
+        </div>
+
+        <!-- Информация об аккаунте -->
+        <div class="settings-section">
+            <h2>Информация об аккаунте</h2>
+            <div class="settings-card">
+                <div class="account-info">
+                    <div class="info-item">
+                        <span class="info-label">Дата регистрации:</span>
+                        <span class="info-value">{{ user_data.created_at[:10] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">ID пользователя:</span>
+                        <span class="info-value">{{ user_data.id }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Сообщения flash -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+{% endblock %}

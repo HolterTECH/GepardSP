@@ -1,0 +1,122 @@
+{% extends "main_base.html" %}
+
+{% block title %}Команды - Управление проектами{% endblock %}
+
+{% block content %}
+<div class="teams-container">
+    <div class="team-header">
+        <h1>👥 Мои команды</h1>
+        <p>Проекты, в которых вы участвуете, и их команды</p>
+    </div>
+
+    {% if projects_with_teams %}
+        <div class="projects-grid">
+            {% for project_data in projects_with_teams %}
+            <div class="project-team-card">
+                <div class="project-header">
+                    <div class="project-title">{{ project_data.project.name }}</div>
+                    <div class="members-count">{{ project_data.members|length }} участников</div>
+                </div>
+                
+                <div class="members-list">
+                    {% for member in project_data.members %}
+                    <div class="member-item">
+                        <div class="member-info">
+                            <span class="member-name">{{ member.username }}</span>
+                            <span class="member-email" style="font-size: 0.9em; color: #7f8c8d; display: block;">
+                                {{ member.email }}
+                            </span>
+                        </div>
+                        <div class="member-role-badge role-{{ member.role }}">
+                            {{ member.role }}
+                            {% if member.user_id == project_data.project.user_id %}
+                            (Владелец)
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="project-actions">
+                    <a href="{{ url_for('project_team', project_id=project_data.project.id) }}" 
+                       class="btn btn-primary">
+                        <span>👥</span>
+                        Управление командой
+                    </a>
+                    <a href="{{ url_for('kanban', project_id=project_data.project.id) }}" 
+                       class="btn btn-secondary">
+                        <span>📋</span>
+                        Перейти к проекту
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>Вы пока не участвуете ни в каких проектах</h3>
+            <p>Создайте новый проект или попросите добавить вас в существующий</p>
+            <div style="margin-top: 20px;">
+                <a href="{{ url_for('create_project') }}" class="btn btn-primary">
+                    <span>➕</span>
+                    Создать проект
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                    <span>📂</span>
+                    Мои проекты
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Добавляем анимацию появления карточек
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.project-team-card');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
+    });
+
+    // Функция для поиска по проектам (если проектов много)
+    document.addEventListener('DOMContentLoaded', function() {
+        const projectCards = document.querySelectorAll('.project-team-card');
+        
+        // Добавляем поиск если проектов больше 5
+        if (projectCards.length > 5) {
+            const searchContainer = document.createElement('div');
+            searchContainer.className = 'search-container';
+            searchContainer.innerHTML = `
+                <div class="form-group" style="max-width: 400px; margin: 20px 0;">
+                    <input type="text" id="projectSearch" placeholder="Поиск проектов..." 
+                           style="width: 100%; padding: 10px; border: 2px solid #e9ecef; border-radius: 8px;">
+                </div>
+            `;
+            
+            const teamHeader = document.querySelector('.team-header');
+            teamHeader.parentNode.insertBefore(searchContainer, teamHeader.nextSibling);
+            
+            const searchInput = document.getElementById('projectSearch');
+            
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                
+                projectCards.forEach(card => {
+                    const projectName = card.querySelector('.project-title').textContent.toLowerCase();
+                    const matches = projectName.includes(searchTerm);
+                    
+                    card.style.display = matches ? 'block' : 'none';
+                    
+                    // Анимация появления/скрытия
+                    if (matches) {
+                        card.style.animation = 'fadeInUp 0.3s ease-out';
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

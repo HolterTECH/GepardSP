@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Управление проектами{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        {% if current_user.menu_position == 'side' %}
+        <!-- Боковое меню -->
+        <nav class="sidebar" id="mainSidebar">
+            <div class="sidebar-header">
+                <h2>Меню</h2>
+                <button class="toggle-sidebar-btn" onclick="toggleSidebar('mainSidebar')">
+                    <span class="menu-icon">←</span>
+                </button>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item {% if active_tab == 'projects' %}active{% endif %}">
+                    <a href="{{ url_for('index') }}" data-tooltip="Проекты">
+                        <span class="menu-icon">📁</span>
+                        <span class="menu-text">Проекты</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if active_tab == 'my_tasks' %}active{% endif %}">
+                    <a href="{{ url_for('my_tasks') }}" data-tooltip="Мои задачи">
+                        <span class="menu-icon">✅</span>
+                        <span class="menu-text">Мои задачи</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if active_tab == 'team' %}active{% endif %}">
+                    <a href="{{ url_for('team') }}" data-tooltip="Команды проектов">
+                        <span class="menu-icon">👥</span>
+                        <span class="menu-text">Команды проектов</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if active_tab == 'calendar' %}active{% endif %}">
+                    <a href="{{ url_for('calendar') }}" data-tooltip="Календарь">
+                        <span class="menu-icon">📅</span>
+                        <span class="menu-text">Календарь</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if active_tab == 'settings' %}active{% endif %}">
+                    <a href="{{ url_for('settings') }}" data-tooltip="Настройки">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Настройки</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% else %}
+        <!-- Верхнее меню -->
+        <nav class="top-navbar">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <h2>Управление проектами</h2>
+                </div>
+                <ul class="top-nav-menu">
+                    <li class="nav-item {% if active_tab == 'projects' %}active{% endif %}">
+                        <a href="{{ url_for('index') }}">
+                            <span class="nav-icon">📁</span>
+                            <span class="nav-text">Проекты</span>
+                        </a>
+                    </li>
+                    <li class="nav-item {% if active_tab == 'my_tasks' %}active{% endif %}">
+                        <a href="{{ url_for('my_tasks') }}">
+                            <span class="nav-icon">✅</span>
+                            <span class="nav-text">Мои задачи</span>
+                        </a>
+                    </li>
+                    <li class="nav-item {% if active_tab == 'team' %}active{% endif %}">
+                        <a href="{{ url_for('team') }}">
+                            <span class="nav-icon">👥</span>
+                            <span class="nav-text">Команды</span>
+                        </a>
+                    </li>
+                    <li class="nav-item {% if active_tab == 'calendar' %}active{% endif %}">
+                        <a href="{{ url_for('calendar') }}">
+                            <span class="nav-icon">📅</span>
+                            <span class="nav-text">Календарь</span>
+                        </a>
+                    </li>
+                    <li class="nav-item {% if active_tab == 'settings' %}active{% endif %}">
+                        <a href="{{ url_for('settings') }}">
+                            <span class="nav-icon">⚙️</span>
+                            <span class="nav-text">Настройки</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        {% endif %}
+
+        <!-- Основной контент -->
+        <main class="main-content {% if current_user.menu_position == 'top' %}main-content-top{% endif %}" id="mainContent">
+            {% if current_user.menu_position == 'side' %}
+            <button class="show-sidebar-btn" id="showMainSidebarBtn" onclick="toggleSidebar('mainSidebar')">
+                <span class="menu-icon">☰</span>
+            </button>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

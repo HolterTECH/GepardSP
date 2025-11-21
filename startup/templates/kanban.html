@@ -1,0 +1,677 @@
+{% extends "project_base.html" %}
+
+{% block title %}Канбан - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1>Канбан доска: {{ project.name }}</h1>
+</div>
+
+<!-- Форма создания новой задачи -->
+<!-- В kanban.html, в форме создания задачи -->
+<div class="create-task-form">
+    <h3>Создать новую задачу</h3>
+    <form id="taskForm">
+        <input type="text" id="taskTitle" placeholder="Название задачи" required>
+        <textarea id="taskDescription" placeholder="Описание задачи"></textarea>
+        
+        <div class="form-row">
+            <div class="field-group">
+                <label for="taskPriority">Приоритет:</label>
+                <select id="taskPriority">
+                    <option value="low">🔵 Низкий</option>
+                    <option value="medium" selected>🟡 Средний</option>
+                    <option value="high">🟠 Высокий</option>
+                    <option value="critical">🔴 Критический</option>
+                </select>
+            </div>
+            
+            <div class="field-group">
+                <label for="taskDuration">Длительность (дней):</label>
+                <input type="number" id="taskDuration" min="1" value="1">
+            </div>
+        </div>
+        
+        <div class="date-fields">
+            <div class="field-group">
+                <label for="taskStartDate">Дата начала:</label>
+                <input type="date" id="taskStartDate">
+            </div>
+            
+            <div class="field-group">
+                <label for="taskEndDate">Дата окончания:</label>
+                <input type="date" id="taskEndDate">
+            </div>
+        </div>
+        
+        <button type="submit">Создать задачу</button>
+    </form>
+</div>
+
+<!-- Канбан доска -->
+<div class="kanban-board">
+    <div class="kanban-column" data-status="planned">
+        <h3>Запланировано</h3>
+        <div class="tasks-list" id="planned-list">
+            {% for task in tasks if task['status'] == 'planned' %}
+                <!-- В карточке задачи добавьте блок с приоритетом -->
+                <div class="task-card" draggable="true" data-task-id="{{ task['id'] }}">
+                    <div class="task-header">
+                        <h4>{{ task['title'] }}</h4>
+                        <button class="edit-btn" onclick="openEditModal({{ task['id'] }})">✏️</button>
+                    </div>
+                    <p>{{ task['description'] }}</p>
+                    
+                    <!-- ДОБАВЬТЕ ЭТОТ БЛОК -->
+                    <div class="task-priority">
+                        <span class="priority-{{ task['priority'] or 'medium' }}">
+                            {% if task['priority'] == 'low' %}🔵 Низкий
+                            {% elif task['priority'] == 'high' %}🟠 Высокий
+                            {% elif task['priority'] == 'critical' %}🔴 Критический
+                            {% else %}🟡 Средний{% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="task-dates">
+                        <div class="date-info"><strong>Начало:</strong> {{ task['start_date'] }}</div>
+                        <div class="date-info"><strong>Окончание:</strong> {{ task['end_date'] }}</div>
+                        <div class="date-info"><strong>Длительность:</strong> {{ task['duration'] }} дн.</div>
+                    </div>
+                    <div class="task-assignees">
+                        {% if task.assignees %}
+                            {% for assignee in task.assignees %}
+                                <span class="assignee-badge">{{ assignee.username }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="kanban-column" data-status="in_progress">
+        <h3>В работе</h3>
+        <div class="tasks-list" id="in-progress-list">
+            {% for task in tasks if task['status'] == 'in_progress' %}
+            <div class="task-card" draggable="true" data-task-id="{{ task['id'] }}">
+                <div class="task-header">
+                    <h4>{{ task['title'] }}</h4>
+                    <button class="edit-btn" onclick="openEditModal({{ task['id'] }})">✏️</button>
+                </div>
+                <p>{{ task['description'] }}</p>
+                <div class="task-dates">
+                    <div class="date-info"><strong>Начало:</strong> {{ task['start_date'] }}</div>
+                    <div class="date-info"><strong>Окончание:</strong> {{ task['end_date'] }}</div>
+                    <div class="date-info"><strong>Длительность:</strong> {{ task['duration'] }} дн.</div>
+                </div>
+                <div class="task-assignees">
+                    {% if task.assignees %}
+                        {% for assignee in task.assignees %}
+                            <span class="assignee-badge">{{ assignee.username }}</span>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="kanban-column" data-status="completed">
+        <h3>Выполнено</h3>
+        <div class="tasks-list" id="completed-list">
+            {% for task in tasks if task['status'] == 'completed' %}
+            <div class="task-card" draggable="true" data-task-id="{{ task['id'] }}">
+                <div class="task-header">
+                    <h4>{{ task['title'] }}</h4>
+                    <button class="edit-btn" onclick="openEditModal({{ task['id'] }})">✏️</button>
+                </div>
+                <p>{{ task['description'] }}</p>
+                <div class="task-dates">
+                    <div class="date-info"><strong>Начало:</strong> {{ task['start_date'] }}</div>
+                    <div class="date-info"><strong>Окончание:</strong> {{ task['end_date'] }}</div>
+                    <div class="date-info"><strong>Длительность:</strong> {{ task['duration'] }} дн.</div>
+                </div>
+                <div class="task-assignees">
+                    {% if task.assignees %}
+                        {% for assignee in task.assignees %}
+                            <span class="assignee-badge">{{ assignee.username }}</span>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования -->
+<!-- В модальном окне редактирования -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Редактировать задачу</h3>
+        <form id="editTaskForm">
+            <input type="hidden" id="editTaskId">
+            
+            <div class="form-group">
+                <label for="editTaskTitle">Название:</label>
+                <input type="text" id="editTaskTitle" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editTaskDescription">Описание:</label>
+                <textarea id="editTaskDescription"></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editTaskPriority">Приоритет:</label>
+                    <select id="editTaskPriority">
+                        <option value="low">🔵 Низкий</option>
+                        <option value="medium">🟡 Средний</option>
+                        <option value="high">🟠 Высокий</option>
+                        <option value="critical">🔴 Критический</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editTaskStatus">Статус:</label>
+                    <select id="editTaskStatus">
+                        <option value="planned">Запланировано</option>
+                        <option value="in_progress">В работе</option>
+                        <option value="completed">Выполнено</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="date-fields">
+                <div class="field-group">
+                    <label>Дата начала:</label>
+                    <input type="date" id="editStartDate">
+                </div>
+                <div class="field-group">
+                    <label>Дата окончания:</label>
+                    <input type="date" id="editEndDate">
+                </div>
+                <div class="field-group">
+                    <label>Длительность (дней):</label>
+                    <input type="number" id="editDuration" min="1">
+                </div>
+            </div>
+            
+            <!-- Секция исполнителей -->
+            <div class="assignees-section">
+                <label>Исполнители:</label>
+                <div id="assigneesList">
+                    <!-- Список исполнителей будет загружаться здесь -->
+                </div>
+                <div class="add-assignee">
+                    <select id="assigneeSelect">
+                        <option value="">Выберите исполнителя...</option>
+                    </select>
+                    <button type="button" onclick="addAssignee()">Добавить</button>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit">Сохранить изменения</button>
+                <button type="button" id="deleteTaskBtn" class="btn-danger">Удалить задачу</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Константы
+    const PROJECT_ID = parseInt(window.location.pathname.split('/')[2]);
+
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', function() {
+        initDragAndDrop();
+        initTaskForm();
+        initEditForm();
+        initDateCalculations();
+        initEditDateCalculations();
+        initDeleteButton();
+    });
+
+    // Drag and Drop функционал
+    function initDragAndDrop() {
+        const taskCards = document.querySelectorAll('.task-card');
+        const columns = document.querySelectorAll('.kanban-column');
+
+        let draggedTask = null;
+
+        taskCards.forEach(card => {
+            card.addEventListener('dragstart', function(e) {
+                draggedTask = this;
+                this.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', this.dataset.taskId);
+            });
+
+            card.addEventListener('dragend', function() {
+                this.classList.remove('dragging');
+                draggedTask = null;
+            });
+
+            card.addEventListener('dblclick', function() {
+                openEditModal(this.dataset.taskId);
+            });
+        });
+
+        columns.forEach(column => {
+            column.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.style.backgroundColor = '#d0d0d0';
+            });
+
+            column.addEventListener('dragleave', function() {
+                this.style.backgroundColor = '#e0e0e0';
+            });
+
+            column.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.style.backgroundColor = '#e0e0e0';
+                
+                if (draggedTask) {
+                    const taskId = draggedTask.dataset.taskId;
+                    const newStatus = this.dataset.status;
+                    const tasksList = this.querySelector('.tasks-list');
+                    
+                    tasksList.appendChild(draggedTask);
+                    
+                    // Обновляем статус на сервере
+                    updateTaskStatus(taskId, newStatus);
+                }
+            });
+        });
+    }
+
+    // Создание новой задачи
+    function initTaskForm() {
+        const taskForm = document.getElementById('taskForm');
+        
+        taskForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('taskTitle').value;
+            const description = document.getElementById('taskDescription').value;
+            const startDate = document.getElementById('taskStartDate').value;
+            const endDate = document.getElementById('taskEndDate').value;
+            const duration = parseInt(document.getElementById('taskDuration').value);
+            
+            createTask(title, description, duration, startDate, endDate);
+        });
+    }
+
+    // Редактирование задачи
+    function initEditForm() {
+        const modal = document.getElementById('editModal');
+        const closeBtn = document.querySelector('.close');
+        const editForm = document.getElementById('editTaskForm');
+        
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+        
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveTaskChanges();
+        });
+    }
+
+    // Кнопка удаления
+    function initDeleteButton() {
+        document.getElementById('deleteTaskBtn').addEventListener('click', function() {
+            const taskId = document.getElementById('editTaskId').value;
+            if (confirm('Вы уверены, что хотите удалить эту задачу?')) {
+                deleteTask(taskId);
+            }
+        });
+    }
+
+    // Автоматический расчет дат для формы создания
+    function initDateCalculations() {
+        const startDateInput = document.getElementById('taskStartDate');
+        const endDateInput = document.getElementById('taskEndDate');
+        const durationInput = document.getElementById('taskDuration');
+        
+        // Устанавливаем сегодняшнюю дату по умолчанию
+        const today = new Date().toISOString().split('T')[0];
+        if (!startDateInput.value) {
+            startDateInput.value = today;
+        }
+        updateEndDateFromStartAndDuration();
+        
+        // Слушатели изменений
+        startDateInput.addEventListener('change', function() {
+            updateEndDateFromStartAndDuration();
+        });
+        
+        durationInput.addEventListener('change', function() {
+            updateEndDateFromStartAndDuration();
+        });
+        
+        endDateInput.addEventListener('change', function() {
+            updateDurationFromStartAndEnd();
+        });
+    }
+
+    // Автоматический расчет дат для модального окна редактирования
+    function initEditDateCalculations() {
+        const startDateInput = document.getElementById('editStartDate');
+        const endDateInput = document.getElementById('editEndDate');
+        const durationInput = document.getElementById('editDuration');
+        
+        // Слушатели изменений для модального окна
+        startDateInput.addEventListener('change', function() {
+            updateEditEndDateFromStartAndDuration();
+        });
+        
+        durationInput.addEventListener('change', function() {
+            updateEditEndDateFromStartAndDuration();
+        });
+        
+        endDateInput.addEventListener('change', function() {
+            updateEditDurationFromStartAndEnd();
+        });
+    }
+
+    function updateEndDateFromStartAndDuration() {
+        const startDate = document.getElementById('taskStartDate').value;
+        const duration = parseInt(document.getElementById('taskDuration').value);
+        
+        if (startDate && duration) {
+            const start = new Date(startDate);
+            const endDate = new Date(start.getTime() + (duration - 1) * 24 * 60 * 60 * 1000);
+            document.getElementById('taskEndDate').value = endDate.toISOString().split('T')[0];
+        }
+    }
+
+    function updateDurationFromStartAndEnd() {
+        const startDate = document.getElementById('taskStartDate').value;
+        const endDate = document.getElementById('taskEndDate').value;
+        
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const duration = Math.ceil((end - start) / (24 * 60 * 60 * 1000)) + 1;
+            document.getElementById('taskDuration').value = duration;
+        }
+    }
+
+    // Функции расчета для модального окна редактирования
+    function updateEditEndDateFromStartAndDuration() {
+        const startDate = document.getElementById('editStartDate').value;
+        const duration = parseInt(document.getElementById('editDuration').value);
+        
+        if (startDate && duration) {
+            const start = new Date(startDate);
+            const endDate = new Date(start.getTime() + (duration - 1) * 24 * 60 * 60 * 1000);
+            document.getElementById('editEndDate').value = endDate.toISOString().split('T')[0];
+        }
+    }
+
+    function updateEditDurationFromStartAndEnd() {
+        const startDate = document.getElementById('editStartDate').value;
+        const endDate = document.getElementById('editEndDate').value;
+        
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const duration = Math.ceil((end - start) / (24 * 60 * 60 * 1000)) + 1;
+            document.getElementById('editDuration').value = duration;
+        }
+    }
+
+    // API функции
+    async function createTask(title, description, duration, startDate, endDate) {
+        try {
+            const response = await fetch(`/api/project/${PROJECT_ID}/task`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title,
+                    description,
+                    duration,
+                    start_date: startDate,
+                    end_date: endDate
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Ошибка при создании задачи: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Ошибка при создании задачи:', error);
+            alert('Ошибка при создании задачи');
+        }
+    }
+
+    async function updateTaskStatus(taskId, newStatus) {
+        try {
+            await fetch(`/api/task/${taskId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    status: newStatus,
+                    position: 0
+                })
+            });
+        } catch (error) {
+            console.error('Ошибка при обновлении статуса:', error);
+        }
+    }
+
+    // Загрузка исполнителей задачи
+    async function loadTaskAssignees(taskId) {
+        try {
+            const response = await fetch(`/api/task/${taskId}/assignees`);
+            const assignees = await response.json();
+            
+            const assigneesList = document.getElementById('assigneesList');
+            assigneesList.innerHTML = '';
+            
+            assignees.forEach(assignee => {
+                const assigneeElement = document.createElement('div');
+                assigneeElement.className = 'assignee-item';
+                assigneeElement.innerHTML = `
+                    <span>${assignee.username}</span>
+                    <button type="button" onclick="removeAssignee(${taskId}, ${assignee.id})">×</button>
+                `;
+                assigneesList.appendChild(assigneeElement);
+            });
+        } catch (error) {
+            console.error('Ошибка при загрузке исполнителей:', error);
+        }
+    }
+
+    // Загрузка доступных исполнителей
+    async function loadAvailableAssignees() {
+        try {
+            const response = await fetch(`/api/project/${PROJECT_ID}/available_assignees`);
+            const assignees = await response.json();
+            
+            const select = document.getElementById('assigneeSelect');
+            select.innerHTML = '<option value="">Выберите исполнителя...</option>';
+            
+            assignees.forEach(assignee => {
+                const option = document.createElement('option');
+                option.value = assignee.id;
+                option.textContent = `${assignee.username} (${assignee.email})`;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Ошибка при загрузке доступных исполнителей:', error);
+        }
+    }
+
+    // Добавление исполнителя
+    async function addAssignee() {
+        const select = document.getElementById('assigneeSelect');
+        const userId = select.value;
+        const taskId = document.getElementById('editTaskId').value;
+        
+        if (!userId) {
+            alert('Выберите исполнителя');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/task/${taskId}/assignees`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_id: parseInt(userId) })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                loadTaskAssignees(taskId);
+                select.value = '';
+            } else {
+                alert('Ошибка при добавлении исполнителя: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Ошибка при добавлении исполнителя:', error);
+            alert('Ошибка при добавлении исполнителя');
+        }
+    }
+
+    // Удаление исполнителя
+    async function removeAssignee(taskId, userId) {
+        try {
+            const response = await fetch(`/api/task/${taskId}/assignees/${userId}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                loadTaskAssignees(taskId);
+            } else {
+                alert('Ошибка при удалении исполнителя: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Ошибка при удалении исполнителя:', error);
+            alert('Ошибка при удалении исполнителя');
+        }
+    }
+
+    async function openEditModal(taskId) {
+        try {
+            const response = await fetch(`/api/task/${taskId}`);
+            const task = await response.json();
+            
+            document.getElementById('editTaskId').value = task.id;
+            document.getElementById('editTaskTitle').value = task.title;
+            document.getElementById('editTaskDescription').value = task.description;
+            document.getElementById('editStartDate').value = task.start_date;
+            document.getElementById('editEndDate').value = task.end_date;
+            document.getElementById('editDuration').value = task.duration;
+            
+            // Загружаем исполнителей
+            await loadTaskAssignees(taskId);
+            await loadAvailableAssignees();
+            
+            document.getElementById('editModal').style.display = 'block';
+        } catch (error) {
+            console.error('Ошибка при загрузке задачи:', error);
+            alert('Ошибка при загрузке задачи');
+        }
+    }
+
+    async function saveTaskChanges() {
+        const taskId = document.getElementById('editTaskId').value;
+        const title = document.getElementById('editTaskTitle').value;
+        const description = document.getElementById('editTaskDescription').value;
+        const startDate = document.getElementById('editStartDate').value;
+        const endDate = document.getElementById('editEndDate').value;
+        const duration = parseInt(document.getElementById('editDuration').value);
+        
+        try {
+            // Сначала обновляем название и описание
+            const updateResponse = await fetch(`/api/task/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: title,
+                    description: description
+                })
+            });
+
+            const updateResult = await updateResponse.json();
+            
+            if (!updateResult.success) {
+                throw new Error('Ошибка при обновлении задачи: ' + updateResult.error);
+            }
+
+            // Затем обновляем даты и длительность
+            const datesResponse = await fetch(`/api/task/${taskId}/dates`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    start_date: startDate,
+                    end_date: endDate,
+                    duration: duration
+                })
+            });
+
+            const datesResult = await datesResponse.json();
+            
+            if (datesResult.success) {
+                document.getElementById('editModal').style.display = 'none';
+                location.reload();
+            } else {
+                throw new Error('Ошибка при обновлении дат: ' + datesResult.error);
+            }
+            
+        } catch (error) {
+            console.error('Ошибка при сохранении изменений:', error);
+            alert('Ошибка при сохранении: ' + error.message);
+        }
+    }
+
+    async function deleteTask(taskId) {
+        try {
+            const response = await fetch(`/api/task/${taskId}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                document.getElementById('editModal').style.display = 'none';
+                location.reload();
+            } else {
+                alert('Ошибка при удалении задачи: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Ошибка при удалении задачи:', error);
+            alert('Ошибка при удалении задачи');
+        }
+    }
+</script>
+{% endblock %}

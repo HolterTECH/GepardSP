@@ -1,0 +1,512 @@
+{% extends "project_base.html" %}
+
+{% block title %}График Ганта - {{ project.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+<style>
+    .gantt-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        overflow-x: auto;
+        margin-left: 0;
+        width: calc(100vw - 280px); /* Учитываем ширину бокового меню */
+        max-width: 100%;
+    }
+
+    /* Для мобильных устройств */
+    @media (max-width: 768px) {
+        .gantt-container {
+            width: 100vw;
+            margin-left: -20px;
+            padding: 10px;
+        }
+    }
+    
+    .gantt-controls {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .gantt-info {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .view-mode-selector {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .view-mode-btn {
+        padding: 8px 16px;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+    
+    .view-mode-btn.active {
+        background: #3498db;
+        color: white;
+        border-color: #3498db;
+    }
+    
+    .gantt-task-details {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        border-left: 4px solid #3498db;
+    }
+    
+    .milestone-marker {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .gantt-grid-header {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .gantt-stat-card {
+        background: white;
+        padding: 15px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .gantt-stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .gantt-stat-label {
+        font-size: 12px;
+        color: #7f8c8d;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1>График Ганта: {{ project.name }}</h1>
+    <p>Визуализация расписания проекта с задачами и сроками</p>
+</div>
+
+<!-- Статистика проекта -->
+<div class="gantt-grid-header">
+    <div class="gantt-stat-card">
+        <div class="gantt-stat-value" id="total-tasks">0</div>
+        <div class="gantt-stat-label">Всего задач</div>
+    </div>
+    <div class="gantt-stat-card">
+        <div class="gantt-stat-value" id="project-duration">0 дн.</div>
+        <div class="gantt-stat-label">Длительность проекта</div>
+    </div>
+    <div class="gantt-stat-card">
+        <div class="gantt-stat-value" id="completed-tasks">0</div>
+        <div class="gantt-stat-label">Выполнено</div>
+    </div>
+    <div class="gantt-stat-card">
+        <div class="gantt-stat-value" id="milestones-count">0</div>
+        <div class="gantt-stat-label">Вехи</div>
+    </div>
+</div>
+
+<!-- Панель управления -->
+<div class="gantt-controls">
+    <div class="view-mode-selector">
+        <button class="view-mode-btn active" data-mode="Quarter Day">1/4 Дня</button>
+        <button class="view-mode-btn" data-mode="Half Day">1/2 Дня</button>
+        <button class="view-mode-btn" data-mode="Day">День</button>
+        <button class="view-mode-btn" data-mode="Week">Неделя</button>
+        <button class="view-mode-btn" data-mode="Month">Месяц</button>
+    </div>
+    
+    <div style="flex: 1;"></div>
+    
+    <button class="btn" onclick="refreshGantt()" style="background-color: #27ae60;">🔄 Обновить</button>
+    <button class="btn" onclick="exportGantt()" style="background-color: #e67e22;">📊 Экспорт</button>
+    <button class="btn" onclick="toggleMilestones()" id="toggleMilestonesBtn" style="background-color: #FFD700;">⭐ Показать вехи</button>
+</div>
+
+<!-- Контейнер для графика Ганта -->
+<div class="gantt-container">
+    <div id="gantt-chart"></div>
+</div>
+
+<!-- Информация о выбранной задаче -->
+<div class="gantt-info">
+    <h3>Информация о задаче</h3>
+    <div id="task-details" class="gantt-task-details">
+        Выберите задачу на графике для просмотра деталей
+    </div>
+    
+    <h3 style="margin-top: 30px;">Вехи проекта</h3>
+    <div id="milestones-list">
+        {% for milestone in milestones %}
+        <div class="milestone-item" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+            <span class="milestone-marker" style="background-color: {{ milestone.color }}"></span>
+            <strong>{{ milestone.title }}</strong> - {{ milestone.date }}
+            {% if milestone.description %}
+            <br><small>{{ milestone.description }}</small>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования задачи -->
+<div id="editTaskModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h3>Редактировать задачу</h3>
+        <form id="editTaskForm">
+            <input type="hidden" id="editTaskId">
+            
+            <div class="form-group">
+                <label for="editTaskName">Название:</label>
+                <input type="text" id="editTaskName" required>
+            </div>
+            
+            <div class="date-fields">
+                <div class="field-group">
+                    <label for="editTaskStart">Начало:</label>
+                    <input type="date" id="editTaskStart" required>
+                </div>
+                <div class="field-group">
+                    <label for="editTaskEnd">Окончание:</label>
+                    <input type="date" id="editTaskEnd" required>
+                </div>
+                <div class="field-group">
+                    <label for="editTaskProgress">Прогресс (%):</label>
+                    <input type="number" id="editTaskProgress" min="0" max="100" required>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn">Сохранить</button>
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Отмена</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+<script>
+    let gantt = null;
+    let currentViewMode = 'Day';
+    let showMilestones = true;
+    const PROJECT_ID = {{ project.id }};
+
+    // Инициализация графика Ганта
+    document.addEventListener('DOMContentLoaded', function() {
+        initGanttChart();
+        initViewModeButtons();
+        initEditForm();
+    });
+
+    // Инициализация графика
+    async function initGanttChart() {
+        try {
+            const response = await fetch(`/api/project/${PROJECT_ID}/gantt/data`);
+            const ganttData = await response.json();
+            
+            updateStatistics(ganttData);
+            
+            // Преобразуем данные для Frappe Gantt
+            const tasks = ganttData.tasks.map(task => ({
+                id: task.id.toString(),
+                name: task.name,
+                start: task.start,
+                end: task.end,
+                progress: task.progress,
+                dependencies: task.dependencies ? task.dependencies.split(',').map(dep => dep.trim()).join(', ') : ''
+            }));
+            
+            // Создаем график Ганта
+            gantt = new Gantt("#gantt-chart", tasks, {
+                header_height: 50,
+                column_width: 30,
+                step: 24,
+                view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+                bar_height: 20,
+                bar_corner_radius: 3,
+                arrow_curve: 5,
+                padding: 18,
+                view_mode: currentViewMode,
+                date_format: 'YYYY-MM-DD',
+                custom_popup_html: null,
+                on_click: function(task) {
+                    showTaskDetails(task);
+                },
+                on_date_change: function(task, start, end) {
+                    updateTaskDates(task.id, start, end);
+                },
+                on_progress_change: function(task, progress) {
+                    updateTaskProgress(task.id, progress);
+                }
+            });
+            
+        } catch (error) {
+            console.error('Ошибка при загрузке графика Ганта:', error);
+            alert('Ошибка при загрузке данных графика Ганта');
+        }
+    }
+
+    // Инициализация кнопок режима просмотра
+    function initViewModeButtons() {
+        const buttons = document.querySelectorAll('.view-mode-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Убираем активный класс у всех кнопок
+                buttons.forEach(b => b.classList.remove('active'));
+                // Добавляем активный класс текущей кнопке
+                this.classList.add('active');
+                // Меняем режим просмотра
+                currentViewMode = this.dataset.mode;
+                gantt.change_view_mode(currentViewMode);
+            });
+        });
+    }
+
+    // Инициализация формы редактирования
+    function initEditForm() {
+        document.getElementById('editTaskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveTaskChanges();
+        });
+    }
+
+    // Показать детали задачи
+    function showTaskDetails(task) {
+        const detailsDiv = document.getElementById('task-details');
+        detailsDiv.innerHTML = `
+            <h4>${task.name}</h4>
+            <p><strong>Период:</strong> ${formatDate(task.start)} - ${formatDate(task.end)}</p>
+            <p><strong>Прогресс:</strong> ${task.progress}%</p>
+            <p><strong>Длительность:</strong> ${calculateDuration(task.start, task.end)} дней</p>
+            ${task.dependencies ? `<p><strong>Зависимости:</strong> ${task.dependencies}</p>` : ''}
+            <button class="btn" onclick="openEditModal('${task.id}')" style="margin-top: 10px;">✏️ Редактировать</button>
+        `;
+    }
+
+    // Открыть модальное окно редактирования
+    async function openEditModal(taskId) {
+        try {
+            const response = await fetch(`/api/task/${taskId}`);
+            const task = await response.json();
+            
+            document.getElementById('editTaskId').value = task.id;
+            document.getElementById('editTaskName').value = task.title;
+            document.getElementById('editTaskStart').value = task.start_date;
+            document.getElementById('editTaskEnd').value = task.end_date;
+            document.getElementById('editTaskProgress').value = task.status === 'completed' ? 100 : 
+                                                               task.status === 'in_progress' ? 50 : 0;
+            
+            document.getElementById('editTaskModal').style.display = 'block';
+        } catch (error) {
+            console.error('Ошибка при загрузке задачи:', error);
+            alert('Ошибка при загрузке данных задачи');
+        }
+    }
+
+    // Закрыть модальное окно редактирования
+    function closeEditModal() {
+        document.getElementById('editTaskModal').style.display = 'none';
+    }
+
+    // Сохранить изменения задачи
+    async function saveTaskChanges() {
+        const taskId = document.getElementById('editTaskId').value;
+        const name = document.getElementById('editTaskName').value;
+        const start = document.getElementById('editTaskStart').value;
+        const end = document.getElementById('editTaskEnd').value;
+        const progress = parseInt(document.getElementById('editTaskProgress').value);
+        
+        // Определяем статус на основе прогресса
+        const status = progress === 100 ? 'completed' : 
+                      progress > 0 ? 'in_progress' : 'planned';
+        
+        try {
+            // Обновляем базовые данные задачи
+            const updateResponse = await fetch(`/api/task/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: name, description: '' })
+            });
+            
+            // Обновляем даты и статус
+            const datesResponse = await fetch(`/api/task/${taskId}/dates`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    start_date: start, 
+                    end_date: end 
+                })
+            });
+            
+            // Обновляем статус
+            const statusResponse = await fetch(`/api/task/${taskId}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: status })
+            });
+            
+            if (updateResponse.ok && datesResponse.ok && statusResponse.ok) {
+                closeEditModal();
+                refreshGantt();
+                alert('Задача успешно обновлена!');
+            } else {
+                throw new Error('Ошибка при обновлении задачи');
+            }
+            
+        } catch (error) {
+            console.error('Ошибка при сохранении изменений:', error);
+            alert('Ошибка при сохранении изменений');
+        }
+    }
+
+    // Обновить даты задачи (при перетаскивании на графике)
+    async function updateTaskDates(taskId, start, end) {
+        try {
+            const response = await fetch(`/api/task/${taskId}/dates`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    start_date: start, 
+                    end_date: end 
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Ошибка при обновлении дат');
+            }
+        } catch (error) {
+            console.error('Ошибка при обновлении дат:', error);
+            // Можно добавить откат изменений в UI
+        }
+    }
+
+    // Обновить прогресс задачи
+    async function updateTaskProgress(taskId, progress) {
+        const status = progress === 100 ? 'completed' : 
+                      progress > 0 ? 'in_progress' : 'planned';
+        
+        try {
+            const response = await fetch(`/api/task/${taskId}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: status })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Ошибка при обновлении прогресса');
+            }
+        } catch (error) {
+            console.error('Ошибка при обновлении прогресса:', error);
+        }
+    }
+
+    // Обновить статистику
+    function updateStatistics(ganttData) {
+        document.getElementById('total-tasks').textContent = ganttData.tasks.length;
+        document.getElementById('milestones-count').textContent = ganttData.milestones.length;
+        
+        // Считаем выполненные задачи
+        const completedTasks = ganttData.tasks.filter(task => task.status === 'completed').length;
+        document.getElementById('completed-tasks').textContent = completedTasks;
+        
+        // Считаем длительность проекта
+        if (ganttData.tasks.length > 0) {
+            const startDates = ganttData.tasks.map(task => new Date(task.start));
+            const endDates = ganttData.tasks.map(task => new Date(task.end));
+            const projectStart = new Date(Math.min(...startDates));
+            const projectEnd = new Date(Math.max(...endDates));
+            const duration = Math.ceil((projectEnd - projectStart) / (1000 * 60 * 60 * 24)) + 1;
+            document.getElementById('project-duration').textContent = duration + ' дн.';
+        }
+    }
+
+    // Вспомогательные функции
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ru-RU');
+    }
+
+    function calculateDuration(start, end) {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    }
+
+    // Действия управления
+    function refreshGantt() {
+        initGanttChart();
+    }
+
+    function exportGantt() {
+        // Простой экспорт в PNG
+        const ganttElement = document.querySelector('#gantt-chart svg');
+        if (ganttElement) {
+            const svgData = new XMLSerializer().serializeToString(ganttElement);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                const pngFile = canvas.toDataURL('image/png');
+                const downloadLink = document.createElement('a');
+                downloadLink.download = `gantt-${PROJECT_ID}-${new Date().toISOString().split('T')[0]}.png`;
+                downloadLink.href = pngFile;
+                downloadLink.click();
+            };
+            
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+        } else {
+            alert('Невозможно экспортировать график');
+        }
+    }
+
+    function toggleMilestones() {
+        showMilestones = !showMilestones;
+        const btn = document.getElementById('toggleMilestonesBtn');
+        btn.textContent = showMilestones ? '⭐ Скрыть вехи' : '⭐ Показать вехи';
+        // Здесь можно добавить логику скрытия/показа вех на графике
+    }
+
+    // Обработчик клика вне модального окна
+    window.onclick = function(event) {
+        const modal = document.getElementById('editTaskModal');
+        if (event.target == modal) {
+            closeEditModal();
+        }
+    }
+</script>
+{% endblock %}

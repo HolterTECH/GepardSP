@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Управление Проектами{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        {% block sidebar %}
+        <!-- Боковое меню будет переопределено в дочерних шаблонах -->
+        {% endblock %}
+        
+        <main class="main-content" id="mainContent">
+            <button class="show-sidebar-btn" id="showProjectSidebarBtn" onclick="toggleSidebar('projectSidebar')">
+                <span class="menu-icon">☰</span>
+            </button>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+    {% block scripts %}{% endblock %}
+    
+    <script>
+        // Заглушка для analytics ДО загрузки других скриптов
+        window.analytics = window.analytics || {
+            track: function() { 
+                if (console && console.log) console.log('Analytics: track called but not implemented'); 
+            },
+            identify: function() { 
+                if (console && console.log) console.log('Analytics: identify called but not implemented'); 
+            },
+            page: function() { 
+                if (console && console.log) console.log('Analytics: page called but not implemented'); 
+            }
+        };
+    </script>
+</body>
+</html>

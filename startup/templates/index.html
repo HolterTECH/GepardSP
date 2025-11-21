@@ -1,0 +1,42 @@
+{% extends "main_base.html" %}
+
+{% block title %}Управление проектами{% endblock %}
+
+{% block content %}
+
+<div class="projects-grid">
+    {% for project in projects %}
+    <div class="project-card">
+        <div class="project-header">
+            <h3>{{ project.name }}</h3>
+            <div class="project-actions">
+                <a href="{{ url_for('kanban', project_id=project.id) }}" class="btn btn-small">Канбан</a>
+                <a href="{{ url_for('network_graph', project_id=project.id) }}" class="btn btn-small btn-success">Сетевой график</a>
+            </div>
+        </div>
+        <p class="project-description">{{ project.description or 'Описание отсутствует' }}</p>
+        <div class="project-stats">
+            <span class="stat">ID: {{ project.id }}</span>
+        </div>
+    </div>
+    {% endfor %}
+    
+    <!-- Кнопка создания проекта -->
+    <div class="project-card create-project-card">
+        <div class="create-project-content">
+            <div class="create-project-icon">+</div>
+            <h3>Создать новый проект</h3>
+            <p>Нажмите, чтобы создать новую задачу</p>
+            <a href="{{ url_for('create_project') }}" class="btn btn-primary create-project-btn">Создать</a>
+        </div>
+    </div>
+    
+    {% if not projects %}
+    <div class="empty-state">
+        <h3>Проектов пока нет</h3>
+        <p>Создайте свой первый проект, чтобы начать работу</p>
+        <a href="{{ url_for('create_project') }}" class="btn btn-primary">Создать проект</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

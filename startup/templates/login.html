@@ -1,0 +1,41 @@
+<!-- login.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Вход в систему</h2>
+            <p>Введите свои учетные данные для доступа к системе</p>
+        </div>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-error">
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="username">Имя пользователя</label>
+                <input type="text" id="username" name="username" required placeholder="Введите имя пользователя">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" required placeholder="Введите ваш пароль">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full">Войти в систему</button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Нет аккаунта? <a href="{{ url_for('auth.register') }}">Создать новый аккаунт</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

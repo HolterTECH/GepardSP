@@ -1,0 +1,730 @@
+<!-- templates/team_tasks.html -->
+{% extends "project_base.html" %}
+
+{% block title %}Задачи команды - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="team-tasks-container">
+    <div class="team-tasks-header">
+        <h1>👥 Задачи команды: {{ project.name }}</h1>
+        <p>Управление задачами всех участников проекта</p>
+    </div>
+
+    <!-- Фильтры и статистика -->
+    <div class="team-filters-section">
+        <div class="filters-row">
+            <div class="filter-group">
+                <label for="memberFilter">Фильтр по участнику:</label>
+                <select id="memberFilter">
+                    <option value="all">Все участники</option>
+                    {% for member in members %}
+                    <option value="{{ member.user_id }}">{{ member.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="statusFilter">Статус:</label>
+                <select id="statusFilter">
+                    <option value="all">Все статусы</option>
+                    <option value="planned">Запланировано</option>
+                    <option value="in_progress">В работе</option>
+                    <option value="completed">Завершено</option>
+                </select>
+            </div>
+
+            <button id="assignTaskBtn" class="btn btn-primary">
+                <span>➕</span> Назначить задачу
+            </button>
+        </div>
+
+        <!-- Статистика команды -->
+        <div class="team-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalTasks">0</div>
+                <div class="stat-label">Всего задач</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="inProgressTasks">0</div>
+                <div class="stat-label">В работе</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completedTasks">0</div>
+                <div class="stat-label">Завершено</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="teamMembers">{{ members|length }}</div>
+                <div class="stat-label">Участников</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Сетка задач команды -->
+    <div class="team-tasks-grid">
+        {% for member in members %}
+        <div class="member-column" data-user-id="{{ member.user_id }}">
+            <div class="member-header">
+                <div class="member-avatar">{{ member.username[0]|upper }}</div>
+                <div class="member-info">
+                    <h4>{{ member.username }}</h4>
+                    <span class="member-role role-{{ member.role }}">{{ member.role }}</span>
+                </div>
+                <div class="task-count" id="taskCount-{{ member.user_id }}">0</div>
+            </div>
+            
+            <div class="member-tasks" id="tasks-{{ member.user_id }}">
+                <!-- Задачи будут загружаться через JavaScript -->
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Модальное окно назначения задачи -->
+<div id="assignTaskModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>📋 Назначить новую задачу</h3>
+        
+        <form id="assignTaskForm">
+            <div class="form-group">
+                <label for="taskTitle">Название задачи *</label>
+                <input type="text" id="taskTitle" name="title" required placeholder="Введите название задачи">
+            </div>
+            
+            <div class="form-group">
+                <label for="taskDescription">Описание</label>
+                <textarea id="taskDescription" name="description" placeholder="Описание задачи" rows="3"></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="taskAssignee">Исполнитель *</label>
+                    <select id="taskAssignee" name="assignee_id" required>
+                        <option value="">Выберите исполнителя</option>
+                        {% for member in members %}
+                        <option value="{{ member.user_id }}">{{ member.username }} ({{ member.role }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="taskDuration">Длительность (дней)</label>
+                    <input type="number" id="taskDuration" name="duration" min="1" value="3">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="taskStartDate">Дата начала</label>
+                    <input type="date" id="taskStartDate" name="start_date">
+                </div>
+                
+                <div class="form-group">
+                    <label for="taskPriority">Приоритет</label>
+                    <select id="taskPriority" name="priority">
+                        <option value="low">Низкий</option>
+                        <option value="medium" selected>Средний</option>
+                        <option value="high">Высокий</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Создать и назначить</button>
+                <button type="button" class="btn btn-secondary" onclick="closeAssignModal()">Отмена</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно просмотра задачи -->
+<!-- В team_tasks.html ЗАМЕНИТЬ модальное окно taskDetailsModal -->
+<!-- Модальное окно редактирования задачи -->
+<div id="taskEditModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <span class="close">&times;</span>
+        <h3>✏️ Редактировать задачу</h3>
+        
+        <form id="taskEditForm">
+            <input type="hidden" id="editTaskId" name="task_id">
+            
+            <div class="form-group">
+                <label for="editTaskTitle">Название задачи *</label>
+                <input type="text" id="editTaskTitle" name="title" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editTaskDescription">Описание</label>
+                <textarea id="editTaskDescription" name="description" rows="3" placeholder="Описание задачи"></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editTaskStatus">Статус *</label>
+                    <select id="editTaskStatus" name="status" required>
+                        <option value="planned">Запланировано</option>
+                        <option value="in_progress">В работе</option>
+                        <option value="completed">Завершено</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editTaskDuration">Длительность (дней) *</label>
+                    <input type="number" id="editTaskDuration" name="duration" min="1" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editTaskStartDate">Дата начала *</label>
+                    <input type="date" id="editTaskStartDate" name="start_date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editTaskEndDate">Дата окончания *</label>
+                    <input type="date" id="editTaskEndDate" name="end_date" required>
+                </div>
+            </div>
+            
+            <!-- Секция исполнителей -->
+            <div class="form-group">
+                <label>Исполнители</label>
+                <div id="editAssigneesList" class="assignees-list">
+                    <!-- Список исполнителей будет загружаться здесь -->
+                </div>
+                <div class="add-assignee-section">
+                    <select id="editAssigneeSelect">
+                        <option value="">Добавить исполнителя...</option>
+                        <!-- Опции будут загружены через JavaScript -->
+                    </select>
+                    <button type="button" class="btn btn-small" onclick="teamTasksManager.addAssigneeToTask()">Добавить</button>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                <button type="button" class="btn btn-secondary" onclick="teamTasksManager.closeEditModal()">Отмена</button>
+                <button type="button" class="btn btn-danger" id="deleteTaskBtn" style="margin-left: auto;">Удалить задачу</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно быстрой смены статуса -->
+<div id="quickStatusModal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <span class="close">&times;</span>
+        <h3>🔄 Сменить статус задачи</h3>
+        
+        <div class="task-info" style="margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+            <strong id="quickStatusTaskTitle"></strong>
+        </div>
+        
+        <div class="status-options">
+            <div class="status-option" data-status="planned">
+                <div class="status-indicator planned"></div>
+                <span>Запланировано</span>
+            </div>
+            <div class="status-option" data-status="in_progress">
+                <div class="status-indicator in_progress"></div>
+                <span>В работе</span>
+            </div>
+            <div class="status-option" data-status="completed">
+                <div class="status-indicator completed"></div>
+                <span>Завершено</span>
+            </div>
+        </div>
+        
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="teamTasksManager.closeQuickStatusModal()">Отмена</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.team-tasks-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.team-tasks-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.team-filters-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.filters-row {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+.filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    min-width: 150px;
+}
+
+.team-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #3498db;
+}
+
+.stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-top: 5px;
+}
+
+.team-tasks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.member-column {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.member-header {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    gap: 12px;
+}
+
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #3498db;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.member-info h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+.member-role {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.role-owner { background: #ffeaa7; color: #856404; }
+.role-admin { background: #a29bfe; color: white; }
+.role-member { background: #74b9ff; color: white; }
+
+.task-count {
+    margin-left: auto;
+    background: #3498db;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.member-tasks {
+    padding: 15px;
+    min-height: 200px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.task-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-left: 4px solid #3498db;
+}
+
+.task-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.task-card.planned { border-left-color: #3498db; }
+.task-card.in_progress { border-left-color: #f39c12; }
+.task-card.completed { border-left-color: #27ae60; }
+
+.task-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+
+.task-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+.task-status {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.status-planned { background: #d6eaf8; color: #3498db; }
+.status-in_progress { background: #fdebd0; color: #f39c12; }
+.status-completed { background: #d5f5e3; color: #27ae60; }
+
+.empty-tasks {
+    text-align: center;
+    color: #7f8c8d;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Модальные окна */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 25px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #aaa;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.task-details .detail-row {
+    margin-bottom: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.task-details .detail-row:last-child {
+    border-bottom: none;
+}
+
+/* В team_tasks.html добавить в extra_css */
+.assignees-list {
+    margin: 10px 0;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.assignee-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    margin: 5px 0;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.assignee-item span {
+    font-weight: 500;
+}
+
+.remove-assignee {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remove-assignee:hover {
+    background: #c0392b;
+}
+
+.add-assignee-section {
+    display: flex;
+    gap: 10px;
+    align-items: end;
+}
+
+.add-assignee-section select {
+    flex: 1;
+}
+
+.btn-small {
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.status-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.status-option {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.status-option:hover {
+    border-color: #3498db;
+    background: #f8f9fa;
+}
+
+.status-option.selected {
+    border-color: #3498db;
+    background: #ebf5fb;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.status-indicator.planned { background: #3498db; }
+.status-indicator.in_progress { background: #f39c12; }
+.status-indicator.completed { background: #27ae60; }
+
+.quick-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.quick-action-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.quick-action-btn:hover {
+    background: #f8f9fa;
+    border-color: #3498db;
+}
+
+/* Обновим стили карточек задач для быстрых действий */
+.task-card {
+    position: relative;
+}
+
+.task-actions {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: none;
+    gap: 5px;
+}
+
+.task-card:hover .task-actions {
+    display: flex;
+}
+
+.task-action-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.task-action-btn:hover {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/team_tasks.js') }}"></script>
+<script>
+    const PROJECT_ID = {{ project.id }};
+    
+    // Устанавливаем сегодняшнюю дату по умолчанию
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('taskStartDate').value = today;
+    });
+</script>
+{% endblock %}
